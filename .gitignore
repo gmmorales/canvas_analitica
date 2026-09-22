@@ -1,0 +1,26 @@
+# Fotos originales sin normalizar (pueden tener EXIF con geolocalización,
+# fecha/hora precisa, datos del dispositivo, o rostros sin consentimiento
+# de publicación). Nunca van al repositorio público.
+datos/corpus_original/
+
+# Imágenes normalizadas SIN consentimiento de publicación.
+# Solo copiamos a corpus_normalizado/ las que sí tienen consentimiento;
+# ver README > "Consentimiento y alcance ético".
+datos/corpus_normalizado_privado/
+
+# Consentimientos, planillas con datos personales, anexo institucional,
+# y cualquier archivo *_privado.* que se genere en el futuro (resguardo
+# genérico, aunque hoy ningún script del pipeline escribe uno).
+anexo_restringido/
+*.consentimiento.*
+*_privado.csv
+*_privado/
+
+# Entornos y cachés de Python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Sistema
+.DS_Store
