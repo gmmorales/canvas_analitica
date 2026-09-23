@@ -43,7 +43,7 @@ falta crear ni activar un venv a mano: `uv run` lo resuelve solo a
 partir de `pyproject.toml` / `uv.lock`.
 
 ```bash
-uv sync   # instala el entorno la primera vez (o si cambian las dependencias)
+uv sync --all-extras   # instala el entorno la primera vez (o si cambian las dependencias)
 ```
 
 1. **Normalización** (Fase 1):
@@ -51,7 +51,6 @@ uv sync   # instala el entorno la primera vez (o si cambian las dependencias)
    uv run pipeline/normalizar.py \
        --entrada datos/corpus_original \
        --salida datos/corpus_normalizado \
-       --log datos/id_mapping_privado.csv
    ```
 2. **Extracción de variables** (Fase 2, parte A):
    ```bash
