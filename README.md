@@ -46,15 +46,20 @@ partir de `pyproject.toml` / `uv.lock`.
 uv sync --all-extras   # instala el entorno la primera vez (o si cambian las dependencias)
 ```
 
-1. **Normalización** (Fase 1):
+1. **Normalización** (Fase 1) — normaliza el corpus y deja el mapa de
+   trazabilidad privado:
    ```bash
    uv run pipeline/normalizar.py \
        --entrada datos/corpus_original \
-       --salida datos/corpus_normalizado \
+       --salida datos/corpus_normalizado
    ```
-
+2. **Extracción de variables** (Fase 2, parte A):
+   ```bash
+   uv run pipeline/extraer_variables.py \
+       --entrada datos/corpus_normalizado \
+       --salida datos/variables_visuales.csv
    ```
-2. **Asociación de ids en metadata**: reemplaza los
+3. **Asociación de ids en metadata** (Fase 2, parte B): reemplaza los
    nombres viejos de las fotos por los `id_imagen` nuevos que asignó
    `normalizar.py` y quita la columna `autor_apellido_nombre`:
    ```bash
@@ -65,17 +70,21 @@ uv sync --all-extras   # instala el entorno la primera vez (o si cambian las dep
    ```
    `metadata_normalizado.csv` queda con las columnas `id_imagen`,
    `autor_id`, `tipo_manovich`, `confianza_etiqueta`, `caso_limite`,
-   `justificacion_etiqueta`, listo para unir con
-   `variables_visuales.csv` por `id_imagen`. Para dejar el nombre
-   `metadata.csv`, usar `--salida datos/metadata.csv`.
-
-3. **Extracción de variables**:
+   `justificacion_etiqueta`. Para dejar el nombre `metadata.csv`, usar
+   `--salida datos/metadata.csv`; en ese caso el paso 4 lo detecta solo.
+   Este script no se puede correr dos veces por accidente: si los
+   `id_imagen` ya son hashes, se detiene (usar `--forzar` para rehacerlo).
+4. **Construir el dataset final** (Fase 2, parte C): une las etiquetas
+   con las variables, normaliza las columnas categóricas (`diseño` ->
+   `diseno`, `SI/NO` -> booleano) y avisa faltantes, duplicados y
+   justificaciones fuera de 80-120 palabras:
    ```bash
-   uv run pipeline/extraer_variables.py \
-       --entrada datos/corpus_normalizado \
-       --salida datos/variables_visuales.csv 
-
-4. **App** *(TBD — Fase 3)*: `uv run streamlit run app/canvas.py`
+   uv run pipeline/construir_dataset.py \
+       --metadata datos/metadata_normalizado.csv \
+       --variables datos/variables_visuales.csv \
+       --salida datos/dataset.csv
+   ```
+5. **App** *(TBD — Fase 3)*: `uv run streamlit run app/canvas.py`
 
 ## Variables de color e histograma (Fase 2)
 
@@ -98,9 +107,10 @@ haber medido el corpus completo, hay que volver a correr el script sobre
 las 180 imágenes.
 
 `datos/variables_visuales.csv` es un resultado intermedio (solo las 5
-variables, sin `autor_id`/`tipo_manovich` autoasignado ni etiquetas): el
-`metadata.csv` final *(TBD)* se arma uniendo esta tabla con el archivo de
-etiquetas de cada autor/a.
+variables, sin `autor_id`, etiquetas ni `justificacion_etiqueta`): el
+dataset final se arma uniendo esta tabla con el archivo de etiquetas de
+cada autor/a — ver `pipeline/construir_dataset.py` y "Dataset y
+variables" más abajo.
 
 Para agregar una dependencia nueva: `uv add <paquete>` (actualiza
 `pyproject.toml` y `uv.lock` automáticamente, no se edita a mano).
@@ -152,8 +162,39 @@ Fase 2, hay que volver a normalizar y volver a medir todo el corpus):
 
 ## Dataset y variables
 
-*(TBD — Fase 2: columnas de `metadata.csv`, justificación de cada
-variable de color/histograma, umbrales de sombra/altas luces.)*
+El dataset final es **una fila por fotografía** y se arma con
+`pipeline/construir_dataset.py` (paso 4 de "Cómo correr el proyecto"),
+uniendo las etiquetas autoasignadas con las variables ya medidas:
+`datos/dataset.csv`.
+
+Columnas, en orden:
+
+1. `id_imagen` — hash sha256 (16 hex) del contenido; estable y no
+   dependiente del nombre de archivo original.
+2. `autor_id` — código/seudónimo de quien fotografió.
+3. `tipo_manovich` — `casual`, `profesional` o `diseno` (el tipo
+   autoasignado, no una categoría declarada).
+4. `confianza_etiqueta` — `alta`, `media` o `baja`.
+5. `caso_limite` — booleano (`True`/`False`): ¿la persona autora dudó
+   entre dos tipos?
+6. `justificacion_etiqueta` — texto de 80 a 120 palabras: por qué se
+   asignó el tipo y qué ambigüedad reconoce. Queda como evidencia
+   cualitativa, no se cuantifica.
+7. Las 5 variables de color/histograma (7 columnas; ver la tabla de
+   arriba): `mediana_luminancia`, `dispersion_luminancia`,
+   `prop_sombras`, `prop_altas_luces`, `matiz_dominante_deg`,
+   `saturacion_media`, `dominancia_cromatica`.
+
+`construir_dataset.py` no recalcula nada: solo une por `id_imagen`,
+normaliza las categóricas (`diseño` -> `diseno`, `Media` -> `media`,
+`SI/NO` -> `True`/`False`) y **avisa por stderr** (sin corregir a ciegas)
+los campos vacíos, los valores no reconocidos, las justificaciones fuera
+de 80-120 palabras, los `id_imagen` duplicados y las fotos con variables
+pero sin etiqueta. Con `--estricto` no escribe la salida si hay faltantes
+o duplicados.
+
+`datos/variables_visuales.csv` y `datos/metadata_normalizado.csv` son
+resultados intermedios: la tabla que se entrega es `datos/dataset.csv`.
 
 ## Consentimiento y alcance ético
 

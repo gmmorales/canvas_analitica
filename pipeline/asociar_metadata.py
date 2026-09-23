@@ -80,6 +80,9 @@ RUTA_SALIDA_POR_DEFECTO = Path("datos/metadata_normalizado.csv")
 # Columnas que NO van al dataset final (identifican a la persona, no a la foto).
 COLUMNAS_A_ELIMINAR = ["autor_apellido_nombre"]
 
+# Patrón de un id_imagen ya asignado por normalizar.py (hash sha256 truncado).
+RE_ID_HASH = re.compile(r"^[0-9a-f]{16}$")
+
 CAMPOS_MAPA = [
     "archivo_original",
     "nombre_original",
@@ -286,6 +289,7 @@ def asociar(
     ruta_mapa: Path,
     ruta_salida: Path,
     estricto: bool,
+    forzar: bool,
 ) -> None:
     por_nombre, por_clave = leer_mapa(ruta_mapa)
     filas, campos, encoding = leer_metadata(ruta_metadata)
@@ -293,6 +297,21 @@ def asociar(
     if "id_imagen" not in campos:
         print(f"{ruta_metadata} no tiene la columna id_imagen.", file=sys.stderr)
         raise SystemExit(2)
+
+    # Protección anti-doble-corrida: si los id_imagen ya son hashes, la
+    # asociación ya se aplicó. Volver a correr trataría los hashes como si
+    # fueran nombres viejos y rompería las filas que no matcheen.
+    ids = [f["id_imagen"] for f in filas]
+    if ids and all(RE_ID_HASH.match(i) for i in ids):
+        print(
+            f"{ruta_metadata} ya tiene los id_imagen con pinta de hash: la "
+            "asociación parece estar aplicada. No se hizo nada.\n"
+            "Si de verdad querés reprocesar (p. ej. cambiaste el mapa), "
+            "pasá --forzar.",
+            file=sys.stderr,
+        )
+        if not forzar:
+            raise SystemExit(2)
 
     campos_salida = [c for c in campos if c not in COLUMNAS_A_ELIMINAR]
     eliminadas = [c for c in campos if c in COLUMNAS_A_ELIMINAR]
@@ -375,8 +394,13 @@ def main() -> None:
         action="store_true",
         help="No escribir la salida si alguna fila queda sin asociar.",
     )
+    parser.add_argument(
+        "--forzar",
+        action="store_true",
+        help="Reprocesar aunque los id_imagen ya parezcan hashes.",
+    )
     args = parser.parse_args()
-    asociar(args.metadata, args.mapa, args.salida, args.estricto)
+    asociar(args.metadata, args.mapa, args.salida, args.estricto, args.forzar)
 
 
 if __name__ == "__main__":
