@@ -1,0 +1,8 @@
+# Dependencias para desplegar la app (Streamlit Community Cloud lee este archivo).
+# Son solo las que necesita app/canvas.py; el pipeline completo (scikit-image,
+# opencv, matplotlib) no hace falta para correr la app.
+streamlit>=1.64.0
+pandas>=3.0.6
+numpy>=2.5.3
+plotly>=7.1.0
+pillow>=12.3.0

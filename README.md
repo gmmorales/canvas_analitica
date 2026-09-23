@@ -74,6 +74,7 @@ uv sync --all-extras   # instala el entorno la primera vez (o si cambian las dep
    `--salida datos/metadata.csv`; en ese caso el paso 4 lo detecta solo.
    Este script no se puede correr dos veces por accidente: si los
    `id_imagen` ya son hashes, se detiene (usar `--forzar` para rehacerlo).
+   
 4. **Construir el dataset final** (Fase 2, parte C): une las etiquetas
    con las variables, normaliza las columnas categóricas (`diseño` ->
    `diseno`, `SI/NO` -> booleano) y avisa faltantes, duplicados y
@@ -84,7 +85,20 @@ uv sync --all-extras   # instala el entorno la primera vez (o si cambian las dep
        --variables datos/variables_visuales.csv \
        --salida datos/dataset.csv
    ```
-5. **App** *(TBD — Fase 3)*: `uv run streamlit run app/canvas.py`
+5. **App** (Fase 3):
+   ```bash
+   uv run streamlit run app/canvas.py
+   ```
+   Lee el dataset (por defecto `datos/dataset.csv`) y **detecta sola** qué
+   columnas son numéricas (candidatas a los ejes), cuáles son categóricas
+   (tipo/confianza/caso límite), cuál es texto libre (justificación) y
+   cuáles son identificadoras. Permite elegir dos variables numéricas para
+   los ejes X/Y (puntos coloreados por `tipo_manovich`), o una sola para
+   ver un ranking en línea; filtra por tipo, confianza y caso límite; y al
+   hacer click en un punto muestra la miniatura, todas las variables y la
+   justificación de esa foto. Si una misma foto tiene varias filas (ids
+   repetidos), se separan mínimamente en el plano y el panel permite ver
+   cada fila por separado.
 
 ## Variables de color e histograma (Fase 2)
 
