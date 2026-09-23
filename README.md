@@ -52,13 +52,30 @@ uv sync --all-extras   # instala el entorno la primera vez (o si cambian las dep
        --entrada datos/corpus_original \
        --salida datos/corpus_normalizado \
    ```
-2. **Extracción de variables** (Fase 2, parte A):
+
+   ```
+2. **Asociación de ids en metadata**: reemplaza los
+   nombres viejos de las fotos por los `id_imagen` nuevos que asignó
+   `normalizar.py` y quita la columna `autor_apellido_nombre`:
+   ```bash
+   uv run pipeline/asociar_metadata.py \
+       --metadata datos/metadata.csv \
+       --mapa datos/trazabilidad_original_normalizado_privado.csv \
+       --salida datos/metadata_normalizado.csv
+   ```
+   `metadata_normalizado.csv` queda con las columnas `id_imagen`,
+   `autor_id`, `tipo_manovich`, `confianza_etiqueta`, `caso_limite`,
+   `justificacion_etiqueta`, listo para unir con
+   `variables_visuales.csv` por `id_imagen`. Para dejar el nombre
+   `metadata.csv`, usar `--salida datos/metadata.csv`.
+
+3. **Extracción de variables**:
    ```bash
    uv run pipeline/extraer_variables.py \
        --entrada datos/corpus_normalizado \
-       --salida datos/variables_visuales.csv
-   ```
-3. **App** *(TBD — Fase 3)*: `uv run streamlit run app/canvas.py`
+       --salida datos/variables_visuales.csv 
+
+4. **App** *(TBD — Fase 3)*: `uv run streamlit run app/canvas.py`
 
 ## Variables de color e histograma (Fase 2)
 
@@ -115,13 +132,19 @@ brillo o saturación queda fuera del pipeline de normalización — se
 mediría antes de calcular las variables de la Fase 2 y borraría
 justamente la variación que se quiere describir.
 
-**Trazabilidad `id_imagen` ↔ archivo original:** el script no escribe
-ningún archivo que mapee el hash a tu nombre de archivo original — decisión
-del grupo para no generar, ni por accidente, un dato que después haya que
-recordar excluir del repo. Si necesitás volver del `id_imagen` al archivo
-original (por ejemplo, para armar `metadata.csv` uniendo con tus
-etiquetas), hay que resolverlo en el mismo paso en el que se unen ambas
-tablas — ver "Variables de color e histograma" más arriba.
+**Trazabilidad `id_imagen` ↔ archivo original:** `normalizar.py` escribe
+un mapa privado, una fila por imagen, con
+`archivo_original`, `nombre_original`, `id_imagen`, `categoria` y
+`archivo_normalizado`. Por defecto va a
+`datos/trazabilidad_original_normalizado_privado.csv`: el `.gitignore` lo
+excluye porque contiene los nombres originales (pueden traer iniciales,
+fechas, etc.), así que no se sube al repo ni se comparte. Se puede
+cambiar de ruta con `--mapa`, o no generarlo con `--sin-mapa`.
+`pipeline/asociar_metadata.py` consume ese mapa para reemplazar los
+nombres viejos de `metadata.csv` por los ids nuevos (y de paso quita la
+columna `autor_apellido_nombre`); el cruce tolera typos, tildes y espacios
+de los nombres cargados a mano, y avisa las filas que no puede asociar en
+vez de asignarlas a ciegas.
 
 Convenciones fijadas (si se cambian después de medir variables en la
 Fase 2, hay que volver a normalizar y volver a medir todo el corpus):
