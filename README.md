@@ -20,7 +20,7 @@ canvas-analitica/
 │   │   ├── casual/
 │   │   ├── profesional/
 │   │   └── diseno/
-│   └── metadata.csv          # (TBD, Fase 2)
+│   └── referencias.csv       # LOCAL, NO se sube: trae nombres de autores/as
 ├── pipeline/                 # normalización + extracción de variables (Fase 1 y 2)
 ├── app/                      # Canvas Analítico en Streamlit (Fase 3)
 ├── paper/                    # decisiones, matriz-hallazgos.md, bitácora Voy/Vengo (Fase 4)
@@ -35,6 +35,17 @@ celular, antes de normalizar. Podés organizarlas como prefiero nombrarlas
 (`casual_01_CB.jpg`) o en subcarpetas `casual/`, `profesional/`,
 `diseno/` — `pipeline/normalizar.py` detecta la categoría de cualquiera
 de las dos formas.
+
+`datos/referencias.csv` (antes `metadata.csv`) es el archivo de entradas
+del corpus: una fila por foto con el `id_imagen` original, el nombre y
+apellido de la persona autora (`autor_apellido_nombre`), el `autor_id`,
+el tipo autoasignado y su justificación. **No se sube al repositorio**
+porque contiene nombres y apellidos (dato personal) — está en
+`.gitignore`. Igual que `corpus_original/`, es un insumo local: se
+comparte por otro canal con el grupo, no por git. El paso 3 del pipeline
+lo procesa y genera `metadata_normalizado.csv`, que es el mismo contenido
+pero con los `id_imagen` ya hasheados y **sin** la columna con el nombre,
+así que ese sí puede versionarse.
 
 ## Cómo correr el proyecto
 
@@ -59,19 +70,20 @@ uv sync --all-extras   # instala el entorno la primera vez (o si cambian las dep
        --entrada datos/corpus_normalizado \
        --salida datos/variables_visuales.csv
    ```
-3. **Asociación de ids en metadata** (Fase 2, parte B): reemplaza los
-   nombres viejos de las fotos por los `id_imagen` nuevos que asignó
+3. **Asociación de ids en las referencias** (Fase 2, parte B): toma
+   `datos/referencias.csv` (local, no versionado), reemplaza los nombres
+   viejos de las fotos por los `id_imagen` nuevos que asignó
    `normalizar.py` y quita la columna `autor_apellido_nombre`:
    ```bash
    uv run pipeline/asociar_metadata.py \
-       --metadata datos/metadata.csv \
+       --metadata datos/referencias.csv \
        --mapa datos/trazabilidad_original_normalizado_privado.csv \
        --salida datos/metadata_normalizado.csv
    ```
    `metadata_normalizado.csv` queda con las columnas `id_imagen`,
    `autor_id`, `tipo_manovich`, `confianza_etiqueta`, `caso_limite`,
-   `justificacion_etiqueta`. Para dejar el nombre `metadata.csv`, usar
-   `--salida datos/metadata.csv`; en ese caso el paso 4 lo detecta solo.
+   `justificacion_etiqueta`. Para dejar el nombre `referencias.csv`, usar
+   `--salida datos/referencias.csv`; en ese caso el paso 4 lo detecta solo.
    Este script no se puede correr dos veces por accidente: si los
    `id_imagen` ya son hashes, se detiene (usar `--forzar` para rehacerlo).
    
@@ -165,7 +177,7 @@ excluye porque contiene los nombres originales (pueden traer iniciales,
 fechas, etc.), así que no se sube al repo ni se comparte. Se puede
 cambiar de ruta con `--mapa`, o no generarlo con `--sin-mapa`.
 `pipeline/asociar_metadata.py` consume ese mapa para reemplazar los
-nombres viejos de `metadata.csv` por los ids nuevos (y de paso quita la
+nombres viejos de `referencias.csv` por los ids nuevos (y de paso quita la
 columna `autor_apellido_nombre`); el cruce tolera typos, tildes y espacios
 de los nombres cargados a mano, y avisa las filas que no puede asociar en
 vez de asignarlas a ciegas.

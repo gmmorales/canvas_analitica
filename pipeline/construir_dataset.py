@@ -304,18 +304,19 @@ def main() -> None:
     args = parser.parse_args()
     ruta_metadata = args.metadata
     # Si se usó el default y no existe metadata_normalizado.csv (porque la
-    # asociación se hizo en el lugar, sobre metadata.csv), usar metadata.csv.
+    # asociación se hizo en el lugar, sobre referencias.csv), usar
+    # referencias.csv.
     if (
         ruta_metadata == RUTA_METADATA_POR_DEFECTO
         and not ruta_metadata.exists()
-        and Path("datos/metadata.csv").exists()
+        and Path("datos/referencias.csv").exists()
     ):
         print(
-            f"No existe {ruta_metadata}; uso datos/metadata.csv "
+            f"No existe {ruta_metadata}; uso datos/referencias.csv "
             "(asociación hecha en el lugar).",
             file=sys.stderr,
         )
-        ruta_metadata = Path("datos/metadata.csv")
+        ruta_metadata = Path("datos/referencias.csv")
     construir(ruta_metadata, args.variables, args.salida, args.estricto)
 
 

@@ -3,7 +3,7 @@ pipeline/asociar_metadata.py
 
 Fase 2 (parte B) — Reemplaza los nombres viejos de las fotos (los de
 datos/corpus_original) que hoy están en la columna id_imagen de
-datos/metadata.csv por los id_imagen NUEVOS que asigna
+datos/referencias.csv por los id_imagen NUEVOS que asigna
 pipeline/normalizar.py (el hash del contenido, que a la vez es el nombre
 del archivo en datos/corpus_normalizado/{categoria}/).
 
@@ -17,7 +17,7 @@ De dónde sale la asociación:
   existe, hay que volver a correr normalizar.py (ver README > Normalización).
 
 Por qué no alcanza con un match literal de texto:
-  los nombres viejos en metadata.csv traen typos, tildes, espacios y a
+  los nombres viejos en referencias.csv traen typos, tildes, espacios y a
   veces les falta el autor. Ejemplos reales de este corpus:
     - "profesiona_02_CB"   -> el archivo es profesional_02_CB.jpeg
     - "profesioal_01_SL"   -> profesional_01_SL.jpg
@@ -54,12 +54,12 @@ reemplazado y SIN la columna autor_apellido_nombre. Columnas finales:
 (autor_apellido_nombre se elimina para no arrastrar el nombre de la
 persona autora al dataset analítico.)
 
-Para dejar datos/metadata.csv con los ids nuevos:
-    uv run pipeline/asociar_metadata.py --salida datos/metadata.csv
+Para dejar datos/referencias.csv con los ids nuevos:
+    uv run pipeline/asociar_metadata.py --salida datos/referencias.csv
 
 Uso:
     uv run pipeline/asociar_metadata.py \
-        --metadata datos/metadata.csv \
+        --metadata datos/referencias.csv \
         --mapa datos/trazabilidad_original_normalizado_privado.csv \
         --salida datos/metadata_normalizado.csv
 """
@@ -73,7 +73,7 @@ import sys
 import unicodedata
 from pathlib import Path
 
-RUTA_METADATA_POR_DEFECTO = Path("datos/metadata.csv")
+RUTA_METADATA_POR_DEFECTO = Path("datos/referencias.csv")
 RUTA_MAPA_POR_DEFECTO = Path("datos/trazabilidad_original_normalizado_privado.csv")
 RUTA_SALIDA_POR_DEFECTO = Path("datos/metadata_normalizado.csv")
 
@@ -377,8 +377,8 @@ def asociar(
     print(f"\n-> {ruta_salida}")
     if ruta_salida.resolve() != ruta_metadata.resolve():
         print(
-            "   (para dejar metadata.csv con los ids nuevos y sin "
-            "autor_apellido_nombre: --salida datos/metadata.csv)"
+            "   (para dejar referencias.csv con los ids nuevos y sin "
+            "autor_apellido_nombre: --salida datos/referencias.csv)"
         )
 
 

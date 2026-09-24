@@ -35,7 +35,7 @@ import streamlit as st
 # --------------------------------------------------------------------------
 RUTAS_DATOS_CANDIDATAS = [
     Path("datos/dataset.csv"),
-    Path("datos/metadata.csv"),
+    Path("datos/referencias.csv"),
     Path("datos/metadata_normalizado.csv"),
 ]
 RUTA_IMAGENES_POR_DEFECTO = Path("datos/corpus_normalizado")

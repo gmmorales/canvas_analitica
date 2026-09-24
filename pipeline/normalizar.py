@@ -50,7 +50,7 @@ Trazabilidad (nombre original -> id_imagen) — la pide la Fase 2:
   de las fotos, que pueden traer iniciales, fechas, etc. El .gitignore ya
   lo excluye, no lo subas al repo ni lo compartas. Sirve para que
   pipeline/asociar_metadata.py reemplace los nombres viejos de
-  datos/metadata.csv por los id_imagen nuevos. Se puede cambiar de ruta
+  datos/referencias.csv por los id_imagen nuevos. Se puede cambiar de ruta
   con --mapa. Si preferís no generarlo, pasá --sin-mapa.
 
 Uso:

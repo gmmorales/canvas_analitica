@@ -8,6 +8,14 @@ datos/corpus_original/
 # ver README > "Consentimiento y alcance ético".
 datos/corpus_normalizado_privado/
 
+# Referencias del corpus: una fila por foto con el nombre y apellido de la
+# persona autora (autor_apellido_nombre). Es dato personal, así que nunca se
+# sube al repositorio público ni se comparte. El dataset analítico equivalente
+# y sin nombres es metadata_normalizado.csv / dataset.csv.
+datos/referencias.csv
+# Nombre viejo del mismo archivo (por si reaparece en ramas o historial).
+datos/metadata.csv
+
 # Consentimientos, planillas con datos personales, anexo institucional,
 # y cualquier archivo *_privado.* que se genere en el futuro (resguardo
 # genérico, aunque hoy ningún script del pipeline escribe uno).
