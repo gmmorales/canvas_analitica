@@ -40,15 +40,30 @@ Cómo se detecta la categoría (tipo_manovich) de cada imagen:
   planos con prefijo, o subcarpetas por categoría) porque escanea
   datos/corpus_original/ de forma recursiva.
 
+Trazabilidad (nombre original -> id_imagen) — la pide la Fase 2:
+  Este script TAMBIÉN escribe un mapa con una fila por imagen normalizada,
+
+      archivo_original, nombre_original, id_imagen, categoria, archivo_normalizado
+
+  El archivo por defecto es datos/trazabilidad_original_normalizado_privado.csv.
+  Es PRIVADO (termina en "_privado.csv"): contiene los nombres originales
+  de las fotos, que pueden traer iniciales, fechas, etc. El .gitignore ya
+  lo excluye, no lo subas al repo ni lo compartas. Sirve para que
+  pipeline/asociar_metadata.py reemplace los nombres viejos de
+  datos/referencias.csv por los id_imagen nuevos. Se puede cambiar de ruta
+  con --mapa. Si preferís no generarlo, pasá --sin-mapa.
+
 Uso:
     python pipeline/normalizar.py \
         --entrada datos/corpus_original \
-        --salida datos/corpus_normalizado
+        --salida datos/corpus_normalizado \
+        --mapa datos/trazabilidad_original_normalizado_privado.csv
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import sys
 from pathlib import Path
@@ -68,6 +83,11 @@ CATEGORIAS_VALIDAS = {"casual", "profesional", "diseno"}
 CATEGORIA_DESCONOCIDA = "sin_categoria"
 
 PERFIL_SRGB = ImageCms.createProfile("sRGB")
+
+# Mapa de trazabilidad nombre_original -> id_imagen. Es privado (contiene
+# los nombres originales): termina en "_privado.csv" y el .gitignore lo
+# excluye. Lo consume pipeline/asociar_metadata.py.
+RUTA_MAPA_POR_DEFECTO = Path("datos/trazabilidad_original_normalizado_privado.csv")
 
 
 def calcular_id_imagen(datos_bytes: bytes) -> str:
@@ -160,8 +180,11 @@ def redimensionar(img: Image.Image, tamano: int) -> Image.Image:
 
 def normalizar_una_imagen(
     ruta_origen: Path, dir_salida: Path
-) -> tuple[str, str]:
-    """Normaliza una imagen y devuelve (id_imagen, categoria) para el resumen por consola."""
+) -> tuple[str, str, Path]:
+    """
+    Normaliza una imagen y devuelve (id_imagen, categoria, ruta_salida)
+    para el resumen por consola y para el mapa de trazabilidad.
+    """
     datos_originales = ruta_origen.read_bytes()
     id_imagen = calcular_id_imagen(datos_originales)
     categoria = detectar_categoria(ruta_origen)
@@ -192,10 +215,31 @@ def normalizar_una_imagen(
 
     print(f"  -> id_imagen={id_imagen}  categoria={categoria}  "
           f"(orientación EXIF original={orientacion_original})")
-    return id_imagen, categoria
+    return id_imagen, categoria, ruta_salida
 
 
-def normalizar_corpus(dir_entrada: Path, dir_salida: Path) -> None:
+def escribir_mapa_trazabilidad(filas: list[dict], ruta_mapa: Path) -> None:
+    """
+    Escribe el mapa nombre_original -> id_imagen que devuelve normalizar.py.
+    PRIVADO: contiene los nombres originales de las fotos. No subir al repo.
+    """
+    ruta_mapa.parent.mkdir(parents=True, exist_ok=True)
+    campos = [
+        "archivo_original",
+        "nombre_original",
+        "id_imagen",
+        "categoria",
+        "archivo_normalizado",
+    ]
+    with ruta_mapa.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=campos)
+        writer.writeheader()
+        writer.writerows(filas)
+
+
+def normalizar_corpus(
+    dir_entrada: Path, dir_salida: Path, ruta_mapa: Path | None
+) -> None:
     dir_salida.mkdir(parents=True, exist_ok=True)
 
     # rglob (recursivo): funciona tanto si corpus_original/ tiene los
@@ -211,22 +255,55 @@ def normalizar_corpus(dir_entrada: Path, dir_salida: Path) -> None:
         return
 
     conteo_por_categoria: dict[str, int] = {}
+    filas_mapa: list[dict] = []
     for ruta in rutas:
         print(f"Normalizando {ruta.relative_to(dir_entrada)} ...")
-        _, categoria = normalizar_una_imagen(ruta, dir_salida)
+        id_imagen, categoria, ruta_salida = normalizar_una_imagen(ruta, dir_salida)
         conteo_por_categoria[categoria] = conteo_por_categoria.get(categoria, 0) + 1
+        filas_mapa.append(
+            {
+                "archivo_original": ruta.relative_to(dir_entrada).as_posix(),
+                "nombre_original": ruta.stem,
+                "id_imagen": id_imagen,
+                "categoria": categoria,
+                "archivo_normalizado": ruta_salida.relative_to(dir_salida).as_posix(),
+            }
+        )
 
     print(f"\n{len(rutas)} imágenes normalizadas -> {dir_salida}")
     for categoria, cantidad in sorted(conteo_por_categoria.items()):
         print(f"  {categoria}: {cantidad}")
+
+    if ruta_mapa is not None:
+        escribir_mapa_trazabilidad(filas_mapa, ruta_mapa)
+        print(
+            f"\nMapa de trazabilidad (nombre original -> id_imagen) -> {ruta_mapa}\n"
+            "  [aviso] ese archivo contiene los nombres originales de las fotos "
+            "y está ignorado por git; no lo subas ni lo compartas."
+        )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Normalización técnica del corpus (Fase 1).")
     parser.add_argument("--entrada", type=Path, default=Path("datos/corpus_original"))
     parser.add_argument("--salida", type=Path, default=Path("datos/corpus_normalizado"))
+    parser.add_argument(
+        "--mapa",
+        type=Path,
+        default=RUTA_MAPA_POR_DEFECTO,
+        help=(
+            "CSV de trazabilidad nombre original -> id_imagen (privado, "
+            "ignorado por git)."
+        ),
+    )
+    parser.add_argument(
+        "--sin-mapa",
+        action="store_true",
+        help="No escribir el CSV de trazabilidad.",
+    )
     args = parser.parse_args()
-    normalizar_corpus(args.entrada, args.salida)
+    ruta_mapa = None if args.sin_mapa else args.mapa
+    normalizar_corpus(args.entrada, args.salida, ruta_mapa)
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ imagen, las 5 variables propuestas en la consigna. Este script SOLO
 calcula variables a partir de los píxeles — no toca autor_id,
 confianza_etiqueta, caso_limite ni justificacion_etiqueta (eso viene de
 un archivo de etiquetas aparte, autoasignado por cada persona, y se une
-en un paso posterior: construir_metadata.py).
+en un paso posterior: asociar_metadata.py).
 
 Salida: datos/variables_visuales.csv
   id_imagen, tipo_manovich, mediana_luminancia, dispersion_luminancia,
