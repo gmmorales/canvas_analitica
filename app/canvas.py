@@ -672,11 +672,152 @@ def figura_matriz(df, vx, vy, bins, por_fila, thumbs, id_col, tipo_col, cell_px)
     return fig, pos
 
 
+# Credenciales de acceso para la app. No es seguro para producción, pero sirve
+# para un prototipo.
+CREDENCIALES = {
+    "admin": "admin123",
+}
+
+
+def aplicar_estilo_login() -> None:
+    st.markdown(
+        """
+        <style>
+            .stApp {
+                background: linear-gradient(135deg, #091321 0%, #101b2b 100%);
+                color: #edf2ff;
+            }
+            .login-shell {
+                min-height: 85vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 2rem 0;
+            }
+            .login-card {
+                width: min(440px, 86vw);
+                background: rgba(18, 25, 38, 0.9);
+                border: 1px solid rgba(76, 120, 168, 0.35);
+                border-radius: 18px;
+                padding: 2rem 1.5rem 1.75rem;
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+            }
+            .login-kicker {
+                display: inline-block;
+                padding: 0.35rem 0.8rem;
+                border-radius: 999px;
+                background: rgba(76, 120, 168, 0.12);
+                border: 1px solid rgba(76, 120, 168, 0.35);
+                color: #9ec1ff;
+                font-size: 0.72rem;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                font-weight: 700;
+                margin-bottom: 1rem;
+            }
+            .login-card h1 {
+                color: #edf2ff;
+                margin: 0;
+                font-size: 2.1rem;
+                font-weight: 700;
+            }
+            .login-subtitle {
+                margin-top: 0.7rem;
+                margin-bottom: 1.5rem;
+                color: #c9d5ee;
+                font-size: 0.98rem;
+            }
+            .login-form {
+                width: min(300px, 76vw);
+                margin: 0 auto;
+            }
+            .login-form .stTextInput {
+                width: 100%;
+            }
+            .login-form .stTextInput > div > div > input,
+            .stTextInput > div > div > input {
+                width: 100%;
+                max-width: 100%;
+                min-height: 2.7rem;
+                border-radius: 10px;
+                background: rgba(8, 15, 23, 0.9);
+                color: #edf2ff;
+                border: 1px solid rgba(76, 120, 168, 0.45);
+            }
+            .login-form .stButton {
+                display: flex;
+                justify-content: center;
+                margin-top: 0.8rem;
+            }
+            .login-form .stButton > button,
+            .stButton > button {
+                width: 100%;
+                max-width: 240px;
+                border: none;
+                border-radius: 12px;
+                background: linear-gradient(135deg, #4C78A8 0%, #72B7B2 100%);
+                color: white;
+                font-weight: 700;
+                padding: 0.75rem 1rem;
+            }
+            .stButton > button:hover {
+                filter: brightness(1.05);
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def mostrar_login() -> None:
+    aplicar_estilo_login()
+    st.markdown(
+        """
+        <div class="login-shell">
+            <div class="login-card">
+                <div class="login-kicker">Canvas Analítico</div>
+                <h1>Acceso</h1>
+                <div class="login-subtitle">
+                    Ingresá tus credenciales para continuar al dashboard.
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<div class="login-form">', unsafe_allow_html=True)
+    cols = st.columns([1, 4, 1])
+    with cols[1]:
+        usuario = st.text_input("Usuario", key="login_usuario", label_visibility="visible")
+        password = st.text_input(
+            "Contraseña",
+            type="password",
+            key="login_password",
+            label_visibility="visible",
+        )
+        if st.button("Ingresar", use_container_width=True):
+            if usuario.strip() in CREDENCIALES and CREDENCIALES[usuario.strip()] == password:
+                st.session_state["logged_in"] = True
+                st.rerun()
+            else:
+                st.error("Credenciales inválidas. Intentá de nuevo.")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
 # --------------------------------------------------------------------------
 # App
 # --------------------------------------------------------------------------
 def main() -> None:
     st.set_page_config(page_title="Canvas Analítico — TPI Manovich", layout="wide")
+
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+
+    if not st.session_state.logged_in:
+        mostrar_login()
+        return
+
     st.title("Canvas Analítico")
     st.caption("Inspirado en ImagePlot de Manovich: cada punto es una fotografía del corpus.")
 
@@ -689,6 +830,13 @@ def main() -> None:
         raiz_txt = st.text_input("Carpeta de imágenes", value=str(RUTA_IMAGENES_POR_DEFECTO))
         if st.button("Recargar datos"):
             st.cache_data.clear()
+
+        st.divider()
+        if st.button("Cerrar sesión"):
+            st.session_state.logged_in = False
+            st.session_state.pop("login_usuario", None)
+            st.session_state.pop("login_password", None)
+            st.rerun()
 
     ruta_datos = primera_ruta_datos(ruta_txt)
     if ruta_datos is None:
