@@ -210,13 +210,33 @@ uv sync --all-extras   # instala el entorno la primera vez (o si cambian las dep
    Lee el dataset (por defecto `datos/dataset.csv`) y **detecta sola** qué
    columnas son numéricas (candidatas a los ejes), cuáles son categóricas
    (tipo/confianza/caso límite), cuál es texto libre (justificación) y
-   cuáles son identificadoras. Permite elegir dos variables numéricas para
-   los ejes X/Y (puntos coloreados por `tipo_manovich`), o una sola para
-   ver un ranking en línea; filtra por tipo, confianza y caso límite; y al
-   hacer click en un punto muestra la miniatura, todas las variables y la
-   justificación de esa foto. Si una misma foto tiene varias filas (ids
-   repetidos), se separan mínimamente en el plano y el panel permite ver
-   cada fila por separado.
+   cuáles son identificadoras.
+
+   Tiene dos pestañas:
+
+   - **Plano (ImagePlot):** scatter X/Y, o ranking en línea con una sola
+     variable. Con **"Modo ImagePlot"** cada foto se dibuja como miniatura
+     en su coordenada (tamaño ajustable), como en el software de Manovich;
+     al hacer click sobre una miniatura se agranda **flotando sobre el
+     plano** y se abre el panel con la foto grande, sus variables y la
+     justificación. Los puntos se colorean por tipo asignado o **por matiz**
+     (variable circular, con escala cíclica). Filtros por tipo, confianza y
+     caso límite. Las filas repetidas de una misma foto se separan
+     mínimamente y se ven por separado.
+   - **Distribuciones:** histogramas agregados del corpus (no de una foto),
+     uno por variable y solapados por tipo; boxplot por tipo; y una **rosa
+     polar del matiz** (24 sectores ajustables) para tratarlo como variable
+     circular.
+   - **Grilla (montage):** estilo ImageMontage. Con **una variable** las
+     fotos quedan ordenadas en una cuadrícula (de menor a mayor); con **dos
+     variables**, una matriz de cuantiles (filas × columnas). Al hacer click
+     en una miniatura se agranda **flotando sobre la grilla**, y abajo
+     aparece el panel con las variables y la justificación.
+
+   Además, los **umbrales de sombras y altas luces son ajustables en vivo**
+   desde la barra lateral: la app mide la luminancia de cada foto una sola
+   vez (con los mismos pesos que el pipeline) y recalcula las proporciones
+   al instante, así se ve cómo cambia la distribución al mover el umbral.
 
 ## Variables de color e histograma (Fase 2)
 
