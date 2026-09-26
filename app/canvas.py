@@ -590,7 +590,7 @@ def _traza_seleccion(xs, ys, cd, cell_px) -> go.Scatter:
         x=xs, y=ys, mode="markers",
         marker=dict(size=cell_px, color="rgba(0,0,0,0)"),
         customdata=cd,
-        hovertemplate="<b>%{customdata[0]}</b><br>tipo: %{customdata[2]}<extra></extra>",
+        hovertemplate="<b>%{customdata[0]}</b><br>tipo: %{customdata[1]}<extra></extra>",
     )
 
 
@@ -613,7 +613,7 @@ def figura_montage(df, var, ncols, thumbs, id_col, tipo_col, cell_px) -> tuple[g
                                       x=x - 0.46, y=y + 0.46, sizex=0.92, sizey=0.92,
                                       xanchor="left", yanchor="top", layer="below"))
         xs.append(x); ys.append(y)
-        cd.append([fila[id_col], clave, fila.get(tipo_col, "")])
+        cd.append([fila[id_col], fila.get(tipo_col, ""), clave])
     fig.add_trace(_traza_seleccion(xs, ys, cd, cell_px))
     fig.update_layout(
         height=int(min(2600, max(280, nrows * (cell_px + 8)))),
@@ -659,7 +659,7 @@ def figura_matriz(df, vx, vy, bins, por_fila, thumbs, id_col, tipo_col, cell_px)
                                           x=x - 0.46, y=y + 0.46, sizex=0.92, sizey=0.92,
                                           xanchor="left", yanchor="top", layer="below"))
             xs.append(x); ys.append(y)
-            cd.append([fila[id_col], clave, fila.get(tipo_col, "")])
+            cd.append([fila[id_col], fila.get(tipo_col, ""), clave])
     fig.add_trace(_traza_seleccion(xs, ys, cd, cell_px))
     fig.update_layout(
         height=int(min(2600, max(320, nb_y * block_h * (cell_px + 6)))),
