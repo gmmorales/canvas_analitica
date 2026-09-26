@@ -6,58 +6,85 @@
 
 ## Contexto del proyecto
 
-Cuando miramos un feed de Instagram intuimos diferencias entre una foto
-"casual", una "profesional" y una pensada como pieza de "diseño" — pero
-esa intuición rara vez se pone a prueba con datos. Lev Manovich propone
-leer estas imágenes no solo por su contenido, sino por sus propiedades
-visuales: luminosidad, contraste, color, composición.
+Lev Manovich propone leer las imágenes de Instagram no solo por su
+contenido, sino por sus propiedades visuales: luminosidad, contraste,
+color, composición.
 
 Canvas Analítico toma esa propuesta y la vuelve un pipeline reproducible:
 un corpus de fotografías reales, autoetiquetadas por su tipo, procesado
 para extraer descriptores visuales objetivos — y comparar si lo que cada
 autor/a *dice* que es su foto coincide con lo que la imagen *mide*.
 
-Proyecto grupal (comisión completa, 20 integrantes) para la materia de
-Procesamiento de Imágenes de la Tecnicatura en Ciencia de Datos e
-Inteligencia Artificial, IFTS N°24.
-
 ---
 
 ## ¿Cómo funciona?
 
-El proyecto implementa un pipeline de cuatro etapas, cada una con su
-propio script y su propia salida verificable:
-
 ```
 Foto original (celular)
-        ↓
-  Normalización técnica
-  (orientación, sRGB, 1024×1024, id anónimo por hash)
-        ↓
-  Extracción de variables
-  (luminancia, contraste, sombras/luces, matiz, dominancia cromática)
-        ↓
-  Unión con etiquetas autoasignadas
-  (tipo_manovich, confianza, justificación de cada autor/a)
-        ↓
-     metadata.csv
-        ↓
-  Canvas interactivo (Streamlit)
+        │
+        ▼
+  1. normalizar.py
+     orientación EXIF · sRGB · 1024×1024 · id anónimo por hash
+        │
+        ├─────────────────────────────┐
+        ▼                             ▼
+  2. extraer_variables.py    mapa privado de trazabilidad
+     5 variables de color      (archivo original ↔ id_imagen,
+        │                       no se sube al repo)
+        │                             ▼
+        │                    3. asociar_metadata.py
+        │                       referencias.csv (nombres) + mapa
+        │                       → metadata_normalizado.csv
+        │                             │
+        └──────────────┬──────────────┘
+                        ▼
+              4. construir_dataset.py
+                 une variables + etiquetas → dataset.csv
+                        │
+                        ▼
+              Canvas interactivo (Streamlit)
 ```
 
-1. **Normalización** (`pipeline/normalizar.py`) corrige orientación
-   EXIF, convierte a sRGB, redimensiona a un tamaño único y asigna a
-   cada imagen un identificador anónimo (hash de su contenido, no de su
-   nombre de archivo original).
-2. **Extracción de variables** (`pipeline/extraer_variables.py`) mide,
-   sobre cada imagen ya normalizada, cinco descriptores visuales — ver
-   tabla más abajo.
-3. **Unión con etiquetas** cruza esas variables con el archivo de
-   etiquetas que completó cada autor/a (tipo asignado, nivel de
-   confianza, justificación), validando y señalando inconsistencias en
-   vez de asumirlas.
-4. **Canvas interactivo** *(en desarrollo)*: visualización en Streamlit
-   del corpus completo, explorable por tipo y por variable.
+1. **`normalizar.py`** — corrige la orientación EXIF, convierte a sRGB
+   y redimensiona cada foto a 1024×1024. A cada imagen le asigna un
+   `id_imagen` anónimo (hash de su contenido, no del nombre de archivo
+   original) y organiza la salida en
+   `datos/corpus_normalizado/{casual,profesional,diseno}/`. De paso
+   escribe un mapa privado que conecta cada `id_imagen` con el archivo
+   original — necesario para el paso 3, pero que nunca se sube al repo.
+
+2. **`extraer_variables.py`** — sobre cada foto ya normalizada, mide
+   las 5 variables de color e histograma (ver tabla más abajo) y las
+   vuelca en `datos/variables_visuales.csv`, una fila por imagen.
+
+3. **`asociar_metadata.py`** — el archivo de etiquetas que completa
+   cada autor/a (`datos/referencias.csv`) nombra las fotos por su
+   nombre original y trae el nombre y apellido de la persona autora.
+   Este script usa el mapa privado del paso 1 para reemplazar esos
+   nombres originales por los `id_imagen` anónimos, y descarta la
+   columna con nombre y apellido. Resultado: `datos/metadata_normalizado.csv`.
+
+4. **`construir_dataset.py`** — une `metadata_normalizado.csv` (las
+   etiquetas) con `variables_visuales.csv` (lo medido) por `id_imagen`,
+   y arma la tabla final: `datos/dataset.csv`.
+
+5. **Canvas interactivo** (`app/canvas.py`, Streamlit) — lee
+   `dataset.csv` y arma la visualización explorable del corpus (detalle
+   en "Instalación y uso local").
+
+---
+
+## Corpus de trabajo
+
+207 fotografías (formato 1:1), tomadas con celular y autoetiquetadas
+según la tipología de Manovich: `casual`, `profesional`, `diseno`. Cada
+foto viene acompañada de:
+
+- `confianza_etiqueta` — qué tan segura estuvo la persona autora de su
+  clasificación (`alta`/`media`/`baja`).
+- `caso_limite` — si dudó entre dos tipos.
+- `justificacion_etiqueta` — un texto de 80 a 120 palabras explicando el
+  criterio de clasificación.
 
 ---
 
@@ -71,19 +98,50 @@ Foto original (celular)
 | `matiz_dominante_deg` / `saturacion_media` | Familia cromática predominante e intensidad de color |
 | `dominancia_cromatica` | Cuánto concentra la imagen en una sola familia de color |
 
-Cada variable está documentada en detalle —qué mide, qué convención
-asume y qué no captura— directamente en el docstring de
-`pipeline/extraer_variables.py`.
+Son 5 variables medidas en 7 columnas numéricas (las dos últimas filas
+de la tabla se registran como par). Cada una está documentada en
+detalle —qué mide, qué convención asume y qué no captura— directamente
+en el docstring de `pipeline/extraer_variables.py`.
 
 ---
 
-## Corpus de trabajo
+## Estructura del proyecto
 
-207 fotografías (formato 1:1), tomadas con
-celular y autoetiquetadas según la tipología de Manovich: `casual`,
-`profesional`, `diseno`. Cada foto viene acompañada de una justificación
-escrita por su autor/a explicando el criterio de clasificación y el
-nivel de confianza en esa etiqueta.
+```
+canvas_analitica/
+├── README.md
+├── pipeline/
+│   ├── normalizar.py           # 1 — normalización técnica
+│   ├── extraer_variables.py    # 2 — variables de color/histograma
+│   ├── asociar_metadata.py     # 3 — id_imagen en las etiquetas
+│   └── construir_dataset.py    # 4 — dataset final
+├── app/
+│   └── canvas.py                # Canvas interactivo (Streamlit)
+├── paper/                       # bitácora, decisiones, licencia, nómina
+├── datos/
+│   ├── corpus_normalizado/
+│   │   ├── casual/
+│   │   ├── profesional/
+│   │   └── diseno/
+│   ├── variables_visuales.csv   # salida de extraer_variables.py
+│   ├── metadata_normalizado.csv # salida de asociar_metadata.py
+│   └── dataset.csv              # dataset final, salida de construir_dataset.py
+├── pyproject.toml
+├── uv.lock
+└── .python-version
+```
+
+Tres archivos son **locales, no se suben al repositorio** (ver
+`.gitignore`):
+
+- `datos/corpus_original/` — las fotos crudas, sin normalizar; puede
+  tener EXIF con datos del dispositivo o geolocalización.
+- `datos/referencias.csv` — el archivo de entradas del corpus (una fila
+  por foto, con nombre y apellido de la persona autora); se comparte
+  con el grupo por otro canal, no por git.
+- `datos/trazabilidad_original_normalizado_privado.csv` — el mapa
+  privado del paso 1; conecta cada `id_imagen` con el nombre de archivo
+  original.
 
 ---
 
@@ -94,43 +152,16 @@ nivel de confianza en esa etiqueta.
 | Procesamiento de imagen | Pillow, scikit-image |
 | Cómputo numérico | NumPy |
 | Datos tabulares | CSV nativo (sin pandas en el pipeline) |
-| Interfaz | Streamlit *(en desarrollo)* |
+| Interfaz | Streamlit |
 | Gestión de dependencias | [uv](https://docs.astral.sh/uv/) |
 
 ---
 
-## Estructura del proyecto
+## Demo
 
-```
-canvas_analitica/
-├── README.md
-├── pipeline/
-│   ├── normalizar.py           # Etapa 1 — normalización técnica
-│   └── extraer_variables.py    # Etapa 2 — variables de color/histograma
-├── app/                         # Canvas interactivo (Streamlit)
-├── paper/                       # Bitácora, decisiones, hallazgos
-├── datos/
-│   ├── corpus_normalizado/
-│   │   ├── casual/
-│   │   ├── profesional/
-│   │   └── diseno/
-│   └── referencias.csv       # LOCAL, NO se sube: trae nombres de autores/as
-├── pipeline/                 # normalización + extracción de variables (Fase 1 y 2)
-├── app/                      # Canvas Analítico en Streamlit (Fase 3)
-├── paper/                    # decisiones, matriz-hallazgos.md, bitácora Voy/Vengo (Fase 4)
-├── pyproject.toml            # dependencias (gestionadas con uv)
-│   ├── etiquetas_autores.csv    # etiquetas autoasignadas por autor/a
-│   ├── variables_visuales.csv   # salida de extraer_variables.py
-│   └── metadata.csv             # dataset final
-├── pyproject.toml
-├── uv.lock
-└── .python-version
-```
+La aplicación está disponible públicamente en Streamlit Community Cloud:
 
-`datos/corpus_original/` (las fotos crudas, sin normalizar) vive solo en
-copias locales de trabajo — nunca se sube al repositorio (ver
-`.gitignore`): puede tener EXIF con datos del dispositivo o, en algunos
-casos, geolocalización.
+[https://canvas-manovich.streamlit.app/](https://canvas-manovich.streamlit.app/)
 
 ---
 
@@ -140,238 +171,149 @@ casos, geolocalización.
 git clone https://github.com/gmmorales/canvas_analitica.git
 cd canvas_analitica
 
-`datos/referencias.csv` (antes `metadata.csv`) es el archivo de entradas
-del corpus: una fila por foto con el `id_imagen` original, el nombre y
-apellido de la persona autora (`autor_apellido_nombre`), el `autor_id`,
-el tipo autoasignado y su justificación. **No se sube al repositorio**
-porque contiene nombres y apellidos (dato personal) — está en
-`.gitignore`. Igual que `corpus_original/`, es un insumo local: se
-comparte por otro canal con el grupo, no por git. El paso 3 del pipeline
-lo procesa y genera `metadata_normalizado.csv`, que es el mismo contenido
-pero con los `id_imagen` ya hasheados y **sin** la columna con el nombre,
-así que ese sí puede versionarse.
-
-## Cómo correr el proyecto
-# Instalar dependencias (con uv)
 uv sync --all-extras
 ```
 
-Con las fotos originales en `datos/corpus_original/`, correr el
-pipeline en orden:
+Con las fotos originales en `datos/corpus_original/` y el archivo de
+referencias en `datos/referencias.csv`, correr el pipeline en orden:
 
 ```bash
-uv sync --all-extras   # instala el entorno la primera vez (o si cambian las dependencias)
+# 1. Normalización — deja el mapa de trazabilidad privado
+uv run pipeline/normalizar.py \
+    --entrada datos/corpus_original \
+    --salida datos/corpus_normalizado
+
+# 2. Extracción de variables
+uv run pipeline/extraer_variables.py \
+    --entrada datos/corpus_normalizado \
+    --salida datos/variables_visuales.csv
+
+# 3. Reemplazo de nombres por id_imagen en las referencias
+uv run pipeline/asociar_metadata.py \
+    --metadata datos/referencias.csv \
+    --mapa datos/trazabilidad_original_normalizado_privado.csv \
+    --salida datos/metadata_normalizado.csv
+
+# 4. Dataset final
+uv run pipeline/construir_dataset.py \
+    --metadata datos/metadata_normalizado.csv \
+    --variables datos/variables_visuales.csv \
+    --salida datos/dataset.csv
+
+# 5. Canvas interactivo
+uv run streamlit run app/canvas.py
 ```
 
-1. **Normalización** (Fase 1) — normaliza el corpus y deja el mapa de
-   trazabilidad privado:
-   ```bash
-   uv run pipeline/normalizar.py \
-       --entrada datos/corpus_original \
-       --salida datos/corpus_normalizado
-   ```
-2. **Extracción de variables** (Fase 2, parte A):
-   ```bash
-   uv run pipeline/extraer_variables.py \
-       --entrada datos/corpus_normalizado \
-       --salida datos/variables_visuales.csv
-   ```
-3. **Asociación de ids en las referencias** (Fase 2, parte B): toma
-   `datos/referencias.csv` (local, no versionado), reemplaza los nombres
-   viejos de las fotos por los `id_imagen` nuevos que asignó
-   `normalizar.py` y quita la columna `autor_apellido_nombre`:
-   ```bash
-   uv run pipeline/asociar_metadata.py \
-       --metadata datos/referencias.csv \
-       --mapa datos/trazabilidad_original_normalizado_privado.csv \
-       --salida datos/metadata_normalizado.csv
-   ```
-   `metadata_normalizado.csv` queda con las columnas `id_imagen`,
-   `autor_id`, `tipo_manovich`, `confianza_etiqueta`, `caso_limite`,
-   `justificacion_etiqueta`. Para dejar el nombre `referencias.csv`, usar
-   `--salida datos/referencias.csv`; en ese caso el paso 4 lo detecta solo.
-   Este script no se puede correr dos veces por accidente: si los
-   `id_imagen` ya son hashes, se detiene (usar `--forzar` para rehacerlo).
-   
-4. **Construir el dataset final** (Fase 2, parte C): une las etiquetas
-   con las variables, normaliza las columnas categóricas (`diseño` ->
-   `diseno`, `SI/NO` -> booleano) y avisa faltantes, duplicados y
-   justificaciones fuera de 80-120 palabras:
-   ```bash
-   uv run pipeline/construir_dataset.py \
-       --metadata datos/metadata_normalizado.csv \
-       --variables datos/variables_visuales.csv \
-       --salida datos/dataset.csv
-   ```
-5. **App** (Fase 3):
-   ```bash
-   uv run streamlit run app/canvas.py
-   ```
-   Lee el dataset (por defecto `datos/dataset.csv`) y **detecta sola** qué
-   columnas son numéricas (candidatas a los ejes), cuáles son categóricas
-   (tipo/confianza/caso límite), cuál es texto libre (justificación) y
-   cuáles son identificadoras.
+Cada script admite rutas de entrada/salida por parámetro — ver
+`--help` en cada uno. Para agregar una dependencia nueva: `uv add
+<paquete>` (actualiza `pyproject.toml` y `uv.lock` solo).
 
-   Tiene dos pestañas:
+**Sobre `asociar_metadata.py`**: el cruce entre `referencias.csv` y el
+mapa de trazabilidad tolera typos, tildes y espacios en los nombres
+cargados a mano, y avisa las filas que no puede asociar en vez de
+asignarlas a ciegas. No se puede correr dos veces por accidente: si los
+`id_imagen` de la entrada ya son hashes, se detiene (usar `--forzar`
+para rehacerlo).
 
-   - **Plano (ImagePlot):** scatter X/Y, o ranking en línea con una sola
-     variable. Con **"Modo ImagePlot"** cada foto se dibuja como miniatura
-     en su coordenada (tamaño ajustable), como en el software de Manovich;
-     al hacer click sobre una miniatura se agranda **flotando sobre el
-     plano** y se abre el panel con la foto grande, sus variables y la
-     justificación. Los puntos se colorean por tipo asignado o **por matiz**
-     (variable circular, con escala cíclica). Filtros por tipo, confianza y
-     caso límite. Las filas repetidas de una misma foto se separan
-     mínimamente y se ven por separado.
-   - **Distribuciones:** histogramas agregados del corpus (no de una foto),
-     uno por variable y solapados por tipo; boxplot por tipo; y una **rosa
-     polar del matiz** (24 sectores ajustables) para tratarlo como variable
-     circular.
-   - **Grilla (montage):** estilo ImageMontage. Con **una variable** las
-     fotos quedan ordenadas en una cuadrícula (de menor a mayor); con **dos
-     variables**, una matriz de cuantiles (filas × columnas). Al hacer click
-     en una miniatura se agranda **flotando sobre la grilla**, y abajo
-     aparece el panel con las variables y la justificación.
+**Sobre el Canvas interactivo**: detecta solo qué columnas de
+`dataset.csv` son numéricas (candidatas a los ejes), cuáles categóricas
+(tipo/confianza/caso límite), cuál es texto libre (justificación) y
+cuáles identificadoras. Tiene tres vistas:
 
-   Además, los **umbrales de sombras y altas luces son ajustables en vivo**
-   desde la barra lateral: la app mide la luminancia de cada foto una sola
-   vez (con los mismos pesos que el pipeline) y recalcula las proporciones
-   al instante, así se ve cómo cambia la distribución al mover el umbral.
+- **Plano (ImagePlot)** — scatter X/Y, o ranking en línea con una sola
+  variable. Con "Modo ImagePlot" cada foto se dibuja como miniatura en
+  su coordenada (tamaño ajustable), como en el software original de
+  Manovich; un click la agranda flotando sobre el plano, con un panel
+  con sus variables y justificación. Los puntos se colorean por tipo
+  asignado o por matiz (variable circular, con escala cíclica), con
+  filtros por tipo, confianza y caso límite.
+- **Distribuciones** — histogramas agregados del corpus (no de una
+  foto), uno por variable y solapados por tipo; boxplot por tipo; y una
+  rosa polar del matiz (24 sectores ajustables) para tratarlo como
+  variable circular.
+- **Grilla (montage)** — estilo ImageMontage. Con una variable, las
+  fotos quedan ordenadas en una cuadrícula de menor a mayor; con dos
+  variables, una matriz de cuantiles (filas × columnas). Un click en
+  una miniatura la agranda flotando sobre la grilla.
 
-## Variables de color e histograma (Fase 2)
+Los umbrales de sombras y altas luces son ajustables en vivo desde la
+barra lateral: la app mide la luminancia de cada foto una sola vez (con
+los mismos pesos que el pipeline) y recalcula las proporciones al
+instante.
 
-Implementadas en `pipeline/extraer_variables.py`, una fila por imagen en
-`datos/variables_visuales.csv`. Cada una se explica en detalle (qué mide,
-qué no mide) en el docstring del script — resumen:
+---
 
-| Variable | Qué mide | Convención/umbral |
-|---|---|---|
-| `mediana_luminancia` | nivel tonal global (mediana de gris) | — |
-| `dispersion_luminancia` | contraste (desvío estándar de gris) | ver `CALCULAR_DISPERSION_COMO_IQR` |
-| `prop_sombras` / `prop_altas_luces` | proporción de píxeles muy oscuros/claros | sombra si L < 0.10, altas luces si L > 0.90 |
-| `matiz_dominante_deg` / `saturacion_media` | familia cromática y intensidad de color | media circular del hue ponderada por saturación (no promedio lineal) |
-| `dominancia_cromatica` | cuánto concentra la imagen en una familia de color | cuantización a 8 niveles por canal RGB |
+## Protocolo de normalización y trazabilidad
 
-Los umbrales de sombra/altas luces y el nivel de cuantización son
-convenciones documentadas en el script (`UMBRAL_SOMBRA`,
-`UMBRAL_ALTAS_LUCES`, `NIVELES_CUANTIZACION`) — si se cambian después de
-haber medido el corpus completo, hay que volver a correr el script sobre
-las 180 imágenes.
+Implementado en `pipeline/normalizar.py`, se aplica igual a las 207
+imágenes.
 
-`datos/variables_visuales.csv` es un resultado intermedio (solo las 5
-variables, sin `autor_id`, etiquetas ni `justificacion_etiqueta`): el
-dataset final se arma uniendo esta tabla con el archivo de etiquetas de
-cada autor/a — ver `pipeline/construir_dataset.py` y "Dataset y
-variables" más abajo.
-
-Para agregar una dependencia nueva: `uv add <paquete>` (actualiza
-`pyproject.toml` y `uv.lock` automáticamente, no se edita a mano).
-
-## Protocolo de normalización
-
-Implementado en `pipeline/normalizar.py`. Se aplica igual a las 180 imágenes.
-
-**Normalización técnica (sí se aplica):**
-1. Corrección de orientación EXIF, *antes* de leer dimensiones o medir nada.
-2. Conversión a sRGB (si la imagen trae perfil ICC embebido se convierte
-   desde ese perfil; si no trae perfil —el caso más común en fotos de
-   celular— se asume sRGB por convención).
-3. Redimensionado a **1024×1024 px** (dimensión final única). El pipeline
-   *no recorta*: asume que cada imagen ya llegó 1:1 (recorte hecho por
-   la persona autora al fotografiar).
+**Qué normaliza:**
+1. Corrección de orientación EXIF, *antes* de leer dimensiones o medir
+   nada.
+2. Conversión a sRGB (si la imagen trae perfil ICC embebido, se
+   convierte desde ese perfil; si no trae perfil —el caso más común en
+   fotos de celular— se asume sRGB por convención).
+3. Redimensionado a **1024×1024 px**. El pipeline *no recorta*: asume
+   que cada imagen ya llegó 1:1 (recorte hecho por la persona autora al
+   fotografiar).
 4. Formato de salida único: **JPEG, calidad 95**, organizado en
    `datos/corpus_normalizado/{casual,profesional,diseno}/` según
-   `tipo_manovich`. La categoría se detecta por el prefijo del nombre de
-   archivo (`casual_01_CB.jpg` → `casual`) o, si no matchea, por el
-   nombre de la carpeta contenedora. Lo que no se puede categorizar cae
-   en `sin_categoria/` con un aviso — nunca se asigna a ciegas.
+   `tipo_manovich`. La categoría se detecta por el prefijo del nombre
+   de archivo (`casual_01_CB.jpg` → `casual`) o, si no matchea, por la
+   carpeta contenedora. Lo que no se puede categorizar cae en
+   `sin_categoria/` con un aviso — nunca se asigna a ciegas.
 5. `id_imagen`: hash sha256 (16 hex) del contenido del archivo — no
    reutiliza el nombre original, que puede traer información personal
-   (iniciales, fecha, etc.).
+   (iniciales, fecha).
 
-**Normalización tonal (NO se aplica acá):** ecualización de contraste,
-brillo o saturación queda fuera del pipeline de normalización — se
-mediría antes de calcular las variables de la Fase 2 y borraría
-justamente la variación que se quiere describir.
+**Qué NO normaliza:** ecualización de contraste, brillo o saturación
+(normalización *tonal*) queda fuera de este paso — eso borraría
+justamente la variación que las variables de la Fase 2 miden.
 
-**Trazabilidad `id_imagen` ↔ archivo original:** `normalizar.py` escribe
-un mapa privado, una fila por imagen, con
+**Trazabilidad `id_imagen` ↔ archivo original:** `normalizar.py`
+escribe, por defecto en
+`datos/trazabilidad_original_normalizado_privado.csv`, un mapa con
 `archivo_original`, `nombre_original`, `id_imagen`, `categoria` y
-`archivo_normalizado`. Por defecto va a
-`datos/trazabilidad_original_normalizado_privado.csv`: el `.gitignore` lo
-excluye porque contiene los nombres originales (pueden traer iniciales,
-fechas, etc.), así que no se sube al repo ni se comparte. Se puede
-cambiar de ruta con `--mapa`, o no generarlo con `--sin-mapa`.
-`pipeline/asociar_metadata.py` consume ese mapa para reemplazar los
-nombres viejos de `referencias.csv` por los ids nuevos (y de paso quita la
-columna `autor_apellido_nombre`); el cruce tolera typos, tildes y espacios
-de los nombres cargados a mano, y avisa las filas que no puede asociar en
-vez de asignarlas a ciegas.
+`archivo_normalizado` por cada foto. Ese archivo está en `.gitignore`
+—contiene los nombres originales— y es lo que después usa
+`asociar_metadata.py` para traducir `referencias.csv` a `id_imagen`. Se
+puede cambiar de ruta con `--mapa`, o no generarlo con `--sin-mapa`.
 
-Convenciones fijadas (si se cambian después de medir variables en la
-Fase 2, hay que volver a normalizar y volver a medir todo el corpus):
+**Convenciones fijadas** (si se cambian después de medir variables, hay
+que volver a normalizar y volver a medir todo el corpus):
 `TAMANO_FINAL = 1024`, `FORMATO_SALIDA = "JPEG"`, `CALIDAD_JPEG = 95`.
+
+---
 
 ## Dataset y variables
 
-El dataset final es **una fila por fotografía** y se arma con
-`pipeline/construir_dataset.py` (paso 4 de "Cómo correr el proyecto"),
-uniendo las etiquetas autoasignadas con las variables ya medidas:
-`datos/dataset.csv`.
+`datos/dataset.csv` es la tabla final, una fila por fotografía, armada
+por `construir_dataset.py`. Columnas, en orden:
 
-Columnas, en orden:
-
-1. `id_imagen` — hash sha256 (16 hex) del contenido; estable y no
-   dependiente del nombre de archivo original.
+1. `id_imagen` — hash sha256 (16 hex) del contenido; estable, no
+   depende del nombre de archivo original.
 2. `autor_id` — código/seudónimo de quien fotografió.
 3. `tipo_manovich` — `casual`, `profesional` o `diseno` (el tipo
-   autoasignado, no una categoría declarada).
+   autoasignado).
 4. `confianza_etiqueta` — `alta`, `media` o `baja`.
 5. `caso_limite` — booleano (`True`/`False`): ¿la persona autora dudó
    entre dos tipos?
-6. `justificacion_etiqueta` — texto de 80 a 120 palabras: por qué se
-   asignó el tipo y qué ambigüedad reconoce. Queda como evidencia
-   cualitativa, no se cuantifica.
-7. Las 5 variables de color/histograma (7 columnas; ver la tabla de
-   arriba): `mediana_luminancia`, `dispersion_luminancia`,
-   `prop_sombras`, `prop_altas_luces`, `matiz_dominante_deg`,
-   `saturacion_media`, `dominancia_cromatica`.
+6. `justificacion_etiqueta` — texto de 80 a 120 palabras; queda como
+   evidencia cualitativa, no se cuantifica.
+7. Las 5 variables de color/histograma (7 columnas — ver tabla más
+   arriba).
 
 `construir_dataset.py` no recalcula nada: solo une por `id_imagen`,
-normaliza las categóricas (`diseño` -> `diseno`, `Media` -> `media`,
-`SI/NO` -> `True`/`False`) y **avisa por stderr** (sin corregir a ciegas)
-los campos vacíos, los valores no reconocidos, las justificaciones fuera
-de 80-120 palabras, los `id_imagen` duplicados y las fotos con variables
-pero sin etiqueta. Con `--estricto` no escribe la salida si hay faltantes
-o duplicados.
+normaliza las columnas categóricas (`diseño` → `diseno`, `Media` →
+`media`, `SI`/`NO` → `True`/`False`) y **avisa por stderr, sin corregir
+a ciegas**: campos vacíos, valores no reconocidos, justificaciones
+fuera de 80–120 palabras, `id_imagen` duplicados, y fotos con variables
+pero sin etiqueta. Con `--estricto` no escribe la salida si hay
+faltantes o duplicados.
 
-`datos/variables_visuales.csv` y `datos/metadata_normalizado.csv` son
-resultados intermedios: la tabla que se entrega es `datos/dataset.csv`.
-
-## Consentimiento y alcance ético
-
-*(TBD: criterio de consentimiento/anonimización del grupo antes de
-publicar el repo — qué fotos entran a `corpus_normalizado/`, cómo se
-tratan los rostros de terceros, qué metadatos sensibles se remueven.)*
-
-## Licencia
-
-*(TBD: código y fotografías pueden — y probablemente deban — licenciarse
-por separado. Definir antes de la entrega.)*
-
-## Bitácora Voy/Vengo
-
-Documentada en `paper/bitacora.md`.
-
-## Integrantes
-
-*(TBD — nombres/códigos de la comisión.)*
-uv run pipeline/normalizar.py
-uv run pipeline/extraer_variables.py
-```
-
-Cada script puede correrse de forma independiente y admite rutas de
-entrada/salida por parámetro — ver `--help` en cada uno.
+`variables_visuales.csv` y `metadata_normalizado.csv` son resultados
+intermedios — la tabla que se entrega es `dataset.csv`.
 
 ---
 
@@ -380,9 +322,9 @@ entrada/salida por parámetro — ver `--help` en cada uno.
 Solo se incluyen en `datos/corpus_normalizado/` (y por lo tanto en el
 repositorio público) fotografías con consentimiento explícito de
 publicación por parte de su autor/a. El identificador de cada imagen es
-un hash de su contenido, no su nombre de archivo original, para evitar
-exponer información personal (iniciales, fechas) en un repositorio
-público.
+un hash de su contenido, no su nombre de archivo original, y el nombre
+y apellido de cada persona autora nunca se sube al repo — vive solo en
+`datos/referencias.csv`, local y fuera de git.
 
 ---
 
@@ -390,9 +332,10 @@ público.
 
 - [x] Normalización técnica del corpus
 - [x] Extracción de variables de color e histograma
-- [x] Unión de etiquetas y variables en un dataset único
-- [ ] Canvas interactivo (Streamlit)
-- [ ] Análisis agregado y paper final
+- [x] Asociación de etiquetas con id_imagen
+- [x] Construcción del dataset final
+- [x] Canvas interactivo (Streamlit)
+- [ ] Paper final
 
 ---
 
@@ -408,8 +351,3 @@ Trabajo práctico integrador para la materia de Procesamiento de
 Imágenes de la Tecnicatura en Ciencia de Datos e Inteligencia
 Artificial, IFTS N°24, basado en la propuesta de analítica cultural de
 Lev Manovich en *Instagram y la imagen contemporánea*.
-
----
-
-*Canvas Analítico. Porque una foto casual y una pensada como pieza de
-diseño no se diferencian a ojo — se miden.*
