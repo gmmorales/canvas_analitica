@@ -939,7 +939,7 @@ def main() -> None:
     df_plot = df_plot.assign(_clave=range(len(df_plot)))
 
     tab_plano, tab_dist, tab_grilla = st.tabs(
-        ["Plano (ImagePlot)", "Distribuciones", "Grilla (montage)"]
+        ["Plano (ImagePlot)", "Distribuciones", "Grilla (montaje)"]
     )
 
     # ================= Pestaña 1: Plano =================
@@ -1075,7 +1075,7 @@ def main() -> None:
         else:
             st.info("No se detectó una columna de matiz para el gráfico polar.")
 
-    # ================= Pestaña 3: Grilla (montage) =================
+    # ================= Pestaña 3: Grilla (montaje) =================
     with tab_grilla:
         st.caption(
             "Vista tipo ImageMontage: las fotos ordenadas o agrupadas en una "
