@@ -45,10 +45,8 @@ Foto original (celular)
               Canvas interactivo (Streamlit)
 ```
 
-1. **`normalizar.py`** — corrige la orientación EXIF, convierte a sRGB
-   y redimensiona cada foto a 1024×1024. A cada imagen le asigna un
-   `id_imagen` anónimo (hash de su contenido, no del nombre de archivo
-   original) y organiza la salida en
+1. **`normalizar.py`** — corrige la orientación EXIF, convierte a sRGB, redimensiona cada foto a 1024×1024 y unifica el formato de salida en JPEG.. A cada imagen le asigna un
+   `id_imagen` anónimo, generado a partir de los datos del propio archivo y no de su nombre original y organiza la salida en
    `datos/corpus_normalizado/{casual,profesional,diseno}/`. De paso
    escribe un mapa privado que conecta cada `id_imagen` con el archivo
    original — necesario para el paso 3, pero que nunca se sube al repo.
