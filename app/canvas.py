@@ -5,13 +5,14 @@ App de Streamlit inspirada en *ImagePlot* (Manovich): ubica cada foto del
 corpus en un plano de dos variables visuales y permite explorar cómo se
 distribuyen según el tipo asignado por cada autor/a.
 
-Dos pestañas:
+Tres pestañas:
   1) Plano (ImagePlot): scatter X/Y o ranking en línea, puntos coloreados
      por tipo O por matiz (variable circular), con la miniatura y la
      justificación al hacer click.
   2) Distribuciones: histogramas agregados del corpus por tipo, boxplots y
      una rosa polar del matiz. NO es el histograma de una foto: es la
      distribución de la variable en todo el corpus (Fase 4).
+ 3)  Grilla (montaje): ordena o agrupa las fotos en una cuadrícula según sus variables.
 
 Umbrales ajustables: los umbrales de "sombras" y "altas luces" se pueden
 mover en vivo. La app mide la luminancia de cada imagen UNA vez (pesos
